@@ -1,7 +1,14 @@
+// Package pbkdf2 implements an optimized PBKDF2 (SHA-256 only).
 package pbkdf2
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
+// Key derives a key from password, salt, and iteration count
+// using PBKDF-HMAC-SHA256.
+//
+// The key will be keyLen bytes long. Etc. You know the rest.
 func Key(password, salt []byte, iter, keyLen int) []byte {
 	// outer0 is HMAC's outer hash function set to the outer
 	// padding.
@@ -42,7 +49,7 @@ func Key(password, salt []byte, iter, keyLen int) []byte {
 	//
 	// It's padded out to blockSize in Merkle–Damgård form so
 	// that the inner loop can write complete blocks.
-	U := make([]byte, blockSize)
+	var U [blockSize]byte
 	U[hashLen] = 0x80
 	binary.BigEndian.PutUint32(U[len(U)-4:], (blockSize+hashLen)*8)
 
@@ -59,22 +66,20 @@ func Key(password, salt []byte, iter, keyLen int) []byte {
 		outer.Write(U[:hashLen])
 		outer.dirtySum(U[:hashLen])
 
-		block := outer
+		sum := outer.h
 
 		// U_n = PRF(password, U_(n-1))
-		for n := 2; n <= iter; n++ {
-			inner := inner0
-			inner.writeBlock(U[:])
-			inner.sumBlock(U[:hashLen])
+		sha256inner(&sum, &inner0.h, &outer0.h, &U, &_K, iter)
 
-			outer := outer0
-			outer.writeBlock(U[:])
-			outer.sumBlock(U[:hashLen])
+		binary.BigEndian.PutUint32(out[0:], sum[0])
+		binary.BigEndian.PutUint32(out[4:], sum[1])
+		binary.BigEndian.PutUint32(out[8:], sum[2])
+		binary.BigEndian.PutUint32(out[12:], sum[3])
+		binary.BigEndian.PutUint32(out[16:], sum[4])
+		binary.BigEndian.PutUint32(out[20:], sum[5])
+		binary.BigEndian.PutUint32(out[24:], sum[6])
+		binary.BigEndian.PutUint32(out[28:], sum[7])
 
-			block.xor(&outer)
-		}
-
-		block.sumBlock(out[:hashLen])
 		out = out[hashLen:]
 	}
 	return ret[:keyLen]

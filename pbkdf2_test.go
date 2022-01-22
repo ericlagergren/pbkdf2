@@ -75,7 +75,7 @@ func testHash(t *testing.T, h func() hash.Hash, hashName string, vectors []testV
 	for i, v := range vectors {
 		o := Key([]byte(v.password), []byte(v.salt), v.iter, len(v.output))
 		if !bytes.Equal(o, v.output) {
-			t.Errorf("%s %d: expected %x, got %x", hashName, i, v.output, o)
+			t.Errorf("%s #%d: expected %x, got %x", hashName, i, v.output, o)
 		}
 	}
 }
@@ -101,19 +101,23 @@ func TestFuzz(t *testing.T) {
 var sink uint8
 
 func BenchmarkHMACSHA256(b *testing.B) {
+	const iter = 4096
 	password := make([]byte, sha256.Size)
+	b.SetBytes(int64(len(password)) * iter * 2)
 	salt := make([]byte, 8)
 	for i := 0; i < b.N; i++ {
-		password = Key(password, salt, 4096, len(password))
+		password = Key(password, salt, iter, len(password))
 	}
-	sink += password[0]
+	sink += password[int(sink)%len(password)]
 }
 
 func BenchmarkHMACSHA256_Go(b *testing.B) {
+	const iter = 4096
 	password := make([]byte, sha256.Size)
+	b.SetBytes(int64(len(password)) * iter * 2)
 	salt := make([]byte, 8)
 	for i := 0; i < b.N; i++ {
 		password = pbkdf2.Key(password, salt, 4096, len(password), sha256.New)
 	}
-	sink += password[0]
+	sink += password[int(sink)%len(password)]
 }

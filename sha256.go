@@ -96,7 +96,6 @@ func (d *digest) checkSum() [hashLen]byte {
 	}
 
 	var digest [hashLen]byte
-
 	binary.BigEndian.PutUint32(digest[0:], d.h[0])
 	binary.BigEndian.PutUint32(digest[4:], d.h[1])
 	binary.BigEndian.PutUint32(digest[8:], d.h[2])
@@ -105,12 +104,11 @@ func (d *digest) checkSum() [hashLen]byte {
 	binary.BigEndian.PutUint32(digest[20:], d.h[5])
 	binary.BigEndian.PutUint32(digest[24:], d.h[6])
 	binary.BigEndian.PutUint32(digest[28:], d.h[7])
-
 	return digest
 }
 
-// dirtySum copies the checksum to out, which must be exactly hashLen
-// bytes.
+// dirtySum copies the checksum to out, which must be exactly
+// hashLen bytes.
 //
 // dirtySum modifies the digest's internal state.
 func (d *digest) dirtySum(out []byte) {
@@ -119,43 +117,4 @@ func (d *digest) dirtySum(out []byte) {
 	}
 	hash := d.checkSum()
 	copy(out, hash[:])
-}
-
-// writeBlock writes p, which must be exactly one block, to the
-// digest.
-//
-// Can ony be used after writing one or more complete blocks to
-// the digest.
-func (d *digest) writeBlock(p []byte) {
-	block(d, p)
-}
-
-// sumBlock copies the current checksum to p.
-//
-// p must be exactly hashLen bytes.
-//
-// Can only be used after writing one or more complete blocks to
-// the digest.
-func (d *digest) sumBlock(p []byte) {
-	_ = p[32-1]
-	binary.BigEndian.PutUint32(p[0:4], d.h[0])
-	binary.BigEndian.PutUint32(p[4:8], d.h[1])
-	binary.BigEndian.PutUint32(p[8:12], d.h[2])
-	binary.BigEndian.PutUint32(p[12:16], d.h[3])
-	binary.BigEndian.PutUint32(p[16:20], d.h[4])
-	binary.BigEndian.PutUint32(p[20:24], d.h[5])
-	binary.BigEndian.PutUint32(p[24:28], d.h[6])
-	binary.BigEndian.PutUint32(p[28:32], d.h[7])
-}
-
-// xor sets d ^= v.
-func (d *digest) xor(v *digest) {
-	d.h[0] ^= v.h[0]
-	d.h[1] ^= v.h[1]
-	d.h[2] ^= v.h[2]
-	d.h[3] ^= v.h[3]
-	d.h[4] ^= v.h[4]
-	d.h[5] ^= v.h[5]
-	d.h[6] ^= v.h[6]
-	d.h[7] ^= v.h[7]
 }

@@ -4,7 +4,15 @@ because an attacker will always have a more powerful setup.
 
 This is an experiment in optimizing PBKDF2.
 
-You probably don't want to use this code.
+```
+goos: darwin
+goarch: arm64
+pkg: github.com/ericlagergren/pbkdf2
+BenchmarkHMACSHA256
+BenchmarkHMACSHA256-8      	    4964	    240688 ns/op	1089.14 MB/s
+BenchmarkHMACSHA256_Go
+BenchmarkHMACSHA256_Go-8   	    2094	    571200 ns/op	 458.94 MB/s
+```
 
 ## Security
 

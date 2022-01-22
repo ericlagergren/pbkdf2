@@ -8,7 +8,7 @@
 
 package pbkdf2
 
-var _K = []uint32{
+var _K = [64]uint32{
 	0x428a2f98,
 	0x71374491,
 	0xb5c0fbcf,

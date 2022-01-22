@@ -116,3 +116,161 @@ sha256ret:
 
 	VST1 [V0.S4, V1.S4], (R0) // store hash value H
 	RET
+
+#define HASH_BLOCK() \
+	VMOV      V0.B16, V2.B16       \
+	VMOV      V1.B16, V3.B16       \
+	VMOV      V2.B16, V8.B16       \
+	VREV32    V4.B16, V4.B16       \
+	VREV32    V5.B16, V5.B16       \
+	VREV32    V6.B16, V6.B16       \
+	VREV32    V7.B16, V7.B16       \
+	                               \
+	VADD      V16.S4, V4.S4, V9.S4 \
+	SHA256SU0 V5.S4, V4.S4         \
+	HASHUPDATE                     \
+	                               \
+	VADD      V17.S4, V5.S4, V9.S4 \
+	SHA256SU0 V6.S4, V5.S4         \
+	SHA256SU1 V7.S4, V6.S4, V4.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V18.S4, V6.S4, V9.S4 \
+	SHA256SU0 V7.S4, V6.S4         \
+	SHA256SU1 V4.S4, V7.S4, V5.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V19.S4, V7.S4, V9.S4 \
+	SHA256SU0 V4.S4, V7.S4         \
+	SHA256SU1 V5.S4, V4.S4, V6.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V20.S4, V4.S4, V9.S4 \
+	SHA256SU0 V5.S4, V4.S4         \
+	SHA256SU1 V6.S4, V5.S4, V7.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V21.S4, V5.S4, V9.S4 \
+	SHA256SU0 V6.S4, V5.S4         \
+	SHA256SU1 V7.S4, V6.S4, V4.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V22.S4, V6.S4, V9.S4 \
+	SHA256SU0 V7.S4, V6.S4         \
+	SHA256SU1 V4.S4, V7.S4, V5.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V23.S4, V7.S4, V9.S4 \
+	SHA256SU0 V4.S4, V7.S4         \
+	SHA256SU1 V5.S4, V4.S4, V6.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V24.S4, V4.S4, V9.S4 \
+	SHA256SU0 V5.S4, V4.S4         \
+	SHA256SU1 V6.S4, V5.S4, V7.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V25.S4, V5.S4, V9.S4 \
+	SHA256SU0 V6.S4, V5.S4         \
+	SHA256SU1 V7.S4, V6.S4, V4.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V26.S4, V6.S4, V9.S4 \
+	SHA256SU0 V7.S4, V6.S4         \
+	SHA256SU1 V4.S4, V7.S4, V5.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V27.S4, V7.S4, V9.S4 \
+	SHA256SU0 V4.S4, V7.S4         \
+	SHA256SU1 V5.S4, V4.S4, V6.S4  \
+	HASHUPDATE                     \
+	                               \
+	VADD      V28.S4, V4.S4, V9.S4 \
+	HASHUPDATE                     \
+	SHA256SU1 V6.S4, V5.S4, V7.S4  \
+	                               \
+	VADD      V29.S4, V5.S4, V9.S4 \
+	HASHUPDATE                     \
+	                               \
+	VADD      V30.S4, V6.S4, V9.S4 \
+	HASHUPDATE                     \
+	                               \
+	VADD      V31.S4, V7.S4, V9.S4 \
+	HASHUPDATE                     \
+	                               \
+	VADD      V2.S4, V0.S4, V0.S4  \
+	VADD      V3.S4, V1.S4, V1.S4
+
+// func sha256inner(p, inner0, outer0 *[8]uint32, U *[blockSize]byte, k *[64]uint32, iter int)
+TEXT ·sha256inner(SB), NOSPLIT, $0
+#define p_ptr R0
+#define inner0_ptr R1
+#define outer0_ptr R2
+#define U_ptr R3
+#define k_ptr R4
+#define n R5
+
+#define H0 V0
+#define H1 V1
+
+#define U0 V4
+#define U1 V5
+#define U2 V6
+#define U3 V7
+
+	MOVD iter+40(FP), n
+	CMP  $2, n
+	BLT  done
+
+	MOVD U+24(FP), U_ptr
+
+	// Load 64*4 bytes K constant (K0-K63)
+	MOVD   k+32(FP), k_ptr
+	VLD1.P 64(k_ptr), [V16.S4, V17.S4, V18.S4, V19.S4]
+	VLD1.P 64(k_ptr), [V20.S4, V21.S4, V22.S4, V23.S4]
+	VLD1.P 64(k_ptr), [V24.S4, V25.S4, V26.S4, V27.S4]
+	VLD1   (k_ptr), [V28.S4, V29.S4, V30.S4, V31.S4]
+
+loop:
+	SUB $1, n
+
+	// Inner.
+	MOVD   inner0+8(FP), inner0_ptr
+	VLD1   (inner0_ptr), [H0.S4, H1.S4]
+	VLD1.P 64(U_ptr), [U0.B16, U1.B16, U2.B16, U3.B16]
+	HASH_BLOCK()
+
+	// Write hash state to U[:32].
+	VREV32 H0.B16, U0.B16
+	VREV32 H1.B16, U1.B16
+
+	// Outer.
+	//
+	// Reload the top 32 bytes of U.
+	MOVD   outer0+16(FP), outer0_ptr
+	VLD1   (outer0_ptr), [H0.S4, H1.S4]
+	SUB    $32, U_ptr, U_ptr
+	VLD1.P 32(U_ptr), [U2.B16, U3.B16]
+	HASH_BLOCK()
+
+	VREV32 H0.B16, H0.B16
+	VREV32 H1.B16, H1.B16
+
+	SUB  $64, U_ptr, U_ptr
+	VST1 [H0.S4, H1.S4], (U_ptr)
+
+	VREV32 H0.B16, H0.B16
+	VREV32 H1.B16, H1.B16
+
+	// sum[i] ^= oh[i]
+	MOVD p+0(FP), p_ptr
+	VLD1 (p_ptr), [V2.S4, V3.S4]
+	VEOR H0.B16, V2.B16, V2.B16
+	VEOR H1.B16, V3.B16, V3.B16
+	VST1 [V2.S4, V3.S4], (p_ptr)
+
+	CMP $2, n
+	BGE loop
+
+done:
+	RET
