@@ -6,16 +6,4 @@ package pbkdf2
 
 import "golang.org/x/sys/cpu"
 
-var k = _K
-
-//go:noescape
-func sha256block(h []uint32, p []byte, k []uint32)
-
-func block(dig *digest, p []byte) {
-	if !cpu.ARM64.HasSHA2 {
-		blockGeneric(dig, p)
-	} else {
-		h := dig.h[:]
-		sha256block(h, p, k)
-	}
-}
+var useAVX2 = cpu.X86.HasAVX2 && cpu.X86.HasBMI2
