@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"hash"
 	"testing"
+	"time"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -75,12 +76,12 @@ func testHash(t *testing.T, h func() hash.Hash, hashName string, vectors []testV
 	for i, v := range vectors {
 		o := Key([]byte(v.password), []byte(v.salt), v.iter, len(v.output))
 		if !bytes.Equal(o, v.output) {
-			t.Errorf("%s #%d: expected %x, got %x", hashName, i, v.output, o)
+			t.Fatalf("%s #%d: expected %x, got %x", hashName, i, v.output, o)
 		}
 	}
 }
 
-func TestWithHMACSHA256(t *testing.T) {
+func TestVectors(t *testing.T) {
 	testHash(t, sha256.New, "SHA256", sha256TestVectors)
 }
 
@@ -98,12 +99,37 @@ func TestFuzz(t *testing.T) {
 	}
 }
 
+func Test100ms(t *testing.T) {
+	test := func(fn func(password, salt []byte, iter, keyLen int) []byte) int {
+		const iter = 4096
+		r := testing.Benchmark(func(b *testing.B) {
+			password := []byte("123456")
+			salt := make([]byte, 32)
+			for i := 0; i < b.N; i++ {
+				salt = fn(password, salt, iter, 32)
+			}
+			sink += salt[int(sink)%len(salt)]
+		})
+		const targ = 100 * time.Millisecond
+		return int(iter * (float64(targ) / float64(r.NsPerOp())))
+	}
+	asm := test(Key)
+	std := test(func(password, salt []byte, iter, keyLen int) []byte {
+		return pbkdf2.Key(password, salt, iter, keyLen, sha256.New)
+	})
+	t.Logf("std: %7d/100ms", std)
+	t.Logf("asm: %7d/100ms (%0.2fx)", asm, float64(asm)/float64(std))
+
+	if pbkdf2Asm && asm/2 < std {
+		t.Fatalf("expected asm >= %d, got %d", std*2, asm)
+	}
+}
+
 var sink uint8
 
 func BenchmarkHMACSHA256(b *testing.B) {
 	const iter = 4096
 	password := make([]byte, sha256.Size)
-	b.SetBytes(int64(len(password)) * iter * 2)
 	salt := make([]byte, 8)
 	for i := 0; i < b.N; i++ {
 		password = Key(password, salt, iter, len(password))
@@ -112,12 +138,11 @@ func BenchmarkHMACSHA256(b *testing.B) {
 }
 
 func BenchmarkHMACSHA256_Go(b *testing.B) {
-	const iter = 4096
+	const iter = 100_000
 	password := make([]byte, sha256.Size)
-	b.SetBytes(int64(len(password)) * iter * 2)
 	salt := make([]byte, 8)
 	for i := 0; i < b.N; i++ {
-		password = pbkdf2.Key(password, salt, 4096, len(password), sha256.New)
+		password = pbkdf2.Key(password, salt, iter, len(password), sha256.New)
 	}
 	sink += password[int(sink)%len(password)]
 }

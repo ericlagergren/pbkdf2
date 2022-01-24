@@ -47,8 +47,16 @@ func (d *digest) Reset() {
 	d.len = 0
 }
 
-func (d *digest) Write(p []byte) {
-	nn := len(p)
+func (d *digest) BlockSize() int {
+	return blockSize
+}
+
+func (d *digest) Size() int {
+	return hashLen
+}
+
+func (d *digest) Write(p []byte) (nn int, err error) {
+	nn = len(p)
 	d.len += uint64(nn)
 	if d.nx > 0 {
 		n := copy(d.x[d.nx:], p)
@@ -67,6 +75,7 @@ func (d *digest) Write(p []byte) {
 	if len(p) > 0 {
 		d.nx = copy(d.x[:], p)
 	}
+	return
 }
 
 func (d *digest) Sum(in []byte) []byte {
@@ -117,4 +126,43 @@ func (d *digest) dirtySum(out []byte) {
 	}
 	hash := d.checkSum()
 	copy(out, hash[:])
+}
+
+// writeBlock writes p, which must be exactly one block, to the
+// digest.
+//
+// Can ony be used after writing one or more complete blocks to
+// the digest.
+func (d *digest) writeBlock(p []byte) {
+	block(d, p)
+}
+
+// sumBlock copies the current checksum to p.
+//
+// p must be exactly hashLen bytes.
+//
+// Can only be used after writing one or more complete blocks to
+// the digest.
+func (d *digest) sumBlock(p []byte) {
+	// Use p[n:m] prevents sumBlock from being inlined.
+	binary.BigEndian.PutUint32(p[0:], d.h[0])
+	binary.BigEndian.PutUint32(p[4:], d.h[1])
+	binary.BigEndian.PutUint32(p[8:], d.h[2])
+	binary.BigEndian.PutUint32(p[12:], d.h[3])
+	binary.BigEndian.PutUint32(p[16:], d.h[4])
+	binary.BigEndian.PutUint32(p[20:], d.h[5])
+	binary.BigEndian.PutUint32(p[24:], d.h[6])
+	binary.BigEndian.PutUint32(p[28:], d.h[7])
+}
+
+// xor sets d ^= v.
+func (d *digest) xor(v *digest) {
+	d.h[0] ^= v.h[0]
+	d.h[1] ^= v.h[1]
+	d.h[2] ^= v.h[2]
+	d.h[3] ^= v.h[3]
+	d.h[4] ^= v.h[4]
+	d.h[5] ^= v.h[5]
+	d.h[6] ^= v.h[6]
+	d.h[7] ^= v.h[7]
 }
