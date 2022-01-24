@@ -4,7 +4,7 @@
 
 //go:build !amd64 && !386 && !s390x && !ppc64le && !arm64
 
-package sha256
+package pbkdf2
 
 func block(dig *digest, p []byte) {
 	blockGeneric(dig, p)

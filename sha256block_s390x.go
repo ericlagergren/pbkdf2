@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package sha256
+package pbkdf2
 
-import "internal/cpu"
+import "golang.org/x/sys/cpu"
 
 var useAsm = cpu.S390X.HasSHA256
