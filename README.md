@@ -1,17 +1,24 @@
 # pbkdf2
-An optimized PBKDF2 implementation is advantageous for a defender
-because an attacker will always have a more powerful setup.
+An optimized PBKDF2 implementation is particularly advantageous 
+for a defender because an attacker will always have a more 
+powerful setup.
 
 This is an experiment in optimizing PBKDF2.
 
+Every GOOS/GOARCH has the same base optimizations. GOARCH=arm64
+has its own assembly core.
+
+TODO: talk about optimizations.
+
 ```
-goos: darwin
-goarch: arm64
-pkg: github.com/ericlagergren/pbkdf2
+=== RUN   Test100ms
+    pbkdf2_test.go:120: std:  720311/100ms
+    pbkdf2_test.go:121: asm: 1874573/100ms (2.60x)
+[...]
 BenchmarkHMACSHA256
-BenchmarkHMACSHA256-8      	    4964	    240688 ns/op	1089.14 MB/s
+BenchmarkHMACSHA256-8      	    5451	    219651 ns/op
 BenchmarkHMACSHA256_Go
-BenchmarkHMACSHA256_Go-8   	    2094	    571200 ns/op	 458.94 MB/s
+BenchmarkHMACSHA256_Go-8   	      84	  13853241 ns/op
 ```
 
 ## Security
